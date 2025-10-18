@@ -22,27 +22,25 @@ public class OrderCreationTest {
     private final UserSteps userSteps = new UserSteps();
     private final OrderSteps orderSteps = new OrderSteps();
     private final Faker faker = new Faker();
+    private User currentUser;
 
     @Before
     public void setUp() {
         URLBase.setUp();
+
+
+        currentUser = new User(faker.internet().safeEmailAddress(), faker.internet().password(), faker.name().firstName());
+        userSteps.setUser(currentUser);
+        userSteps.registerUser();
+        userSteps.loginUser();
     }
 
     @Test
     @DisplayName("Создание заказа с авторизацией")
     @Description("Проверка возможности создания заказа с авторизацией")
     public void authorizedOrderCreation() {
-
-        User user = new User(faker.internet().safeEmailAddress(), faker.internet().password(), faker.name().firstName());
-        userSteps.setUser(user);
-        userSteps.registerUser();
-        userSteps.loginUser();
-
-
         Response response = orderSteps.getIngredientsList();
         List<String> ingredientIds = extractIngredientIds(response.body().asString());
-
-
         Order order = new Order(ingredientIds.subList(0, Math.min(ingredientIds.size(), 3)));
         orderSteps.createOrder(order)
                 .then()
@@ -56,14 +54,10 @@ public class OrderCreationTest {
     @DisplayName("Создание заказа без авторизации")
     @Description("Проверка невозможности создания заказа без авторизации")
     public void unauthorizedOrderCreation() {
-
         Response response = orderSteps.getIngredientsList();
         List<String> ingredientIds = extractIngredientIds(response.body().asString());
 
-
         Order order = new Order(ingredientIds.subList(0, Math.min(ingredientIds.size(), 3)));
-
-
         orderSteps.createOrder(order)
                 .then()
                 .statusCode(SC_UNAUTHORIZED)
@@ -77,16 +71,8 @@ public class OrderCreationTest {
     @DisplayName("Создание заказа с ингредиентами")
     @Description("Проверка создания заказа с корректными ингредиентами")
     public void validOrderWithIngredients() {
-
-        User user = new User(faker.internet().safeEmailAddress(), faker.internet().password(), faker.name().firstName());
-        userSteps.setUser(user);
-        userSteps.registerUser();
-        userSteps.loginUser();
-
-
         Response response = orderSteps.getIngredientsList();
         List<String> ingredientIds = extractIngredientIds(response.body().asString());
-
 
         Order order = new Order(ingredientIds.subList(0, Math.min(ingredientIds.size(), 3)));
         orderSteps.createOrder(order)
@@ -101,13 +87,6 @@ public class OrderCreationTest {
     @DisplayName("Создание заказа без ингредиентов")
     @Description("Проверка создания заказа без ингредиентов")
     public void invalidOrderWithoutIngredients() {
-
-        User user = new User(faker.internet().safeEmailAddress(), faker.internet().password(), faker.name().firstName());
-        userSteps.setUser(user);
-        userSteps.registerUser();
-        userSteps.loginUser();
-
-
         Order emptyOrder = new Order(null);
         orderSteps.createOrder(emptyOrder)
                 .then()
@@ -122,20 +101,11 @@ public class OrderCreationTest {
     @DisplayName("Создание заказа с неверным хешем ингредиентов")
     @Description("Проверка создания заказа с неверными ингредиентами")
     public void invalidOrderWithInvalidIngredients() {
-
-        User user = new User(faker.internet().safeEmailAddress(), faker.internet().password(), faker.name().firstName());
-        userSteps.setUser(user);
-        userSteps.registerUser();
-        userSteps.loginUser();
-
-
         Order invalidOrder = new Order(Arrays.asList("invalid-hash-1", "invalid-hash-2"));
         Response response = orderSteps.createOrder(invalidOrder);
 
-
         System.out.println("Тело ответа:");
         System.out.println(response.prettyPrint());
-
 
         response.then()
                 .statusCode(SC_INTERNAL_SERVER_ERROR);
@@ -143,11 +113,10 @@ public class OrderCreationTest {
 
     @After
     public void tearDown() {
-        if (userSteps.getCurrentUser() != null) {
+        if (currentUser != null && userSteps.getCurrentUser() != null) {
             userSteps.deleteUser();
         }
     }
-
 
     private List<String> extractIngredientIds(String jsonResponseBody) {
         JsonPath jsonPath = new JsonPath(jsonResponseBody);

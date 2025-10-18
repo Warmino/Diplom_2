@@ -13,10 +13,19 @@ import static org.hamcrest.CoreMatchers.*;
 public class UserRegistrationTest {
     private final UserSteps userSteps = new UserSteps();
     private final Faker faker = new Faker();
+    private static User testUser;
 
     @Before
     public void setUp() {
         URLBase.setUp();
+
+        testUser = new User(
+                faker.internet().safeEmailAddress(),
+                faker.internet().password(),
+                faker.name().name()
+        );
+        userSteps.setUser(testUser);
+        userSteps.registerUser();
     }
 
 
@@ -26,21 +35,14 @@ public class UserRegistrationTest {
     @DisplayName("Создание уникального пользователя")
     @Description("Проверка успешного создания уникального пользователя")
     public void uniqueUserRegistration() {
-        User user = new User(
-                faker.internet().safeEmailAddress(),
-                faker.internet().password(),
-                faker.name().name()
-        );
-
-        userSteps.setUser(user);
-        userSteps.registerUser()
+        userSteps.loginUser()
                 .then()
                 .statusCode(SC_OK)
                 .and()
                 .assertThat()
                 .body("success", is(true))
-                .body("user.email", equalTo(user.getEmail()))
-                .body("user.name", equalTo(user.getName()))
+                .body("user.email", equalTo(testUser.getEmail()))
+                .body("user.name", equalTo(testUser.getName()))
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue());
     }
@@ -49,14 +51,12 @@ public class UserRegistrationTest {
     @DisplayName("Создание уже зарегистрированного пользователя")
     @Description("Проверка попытки создать уже существующего пользователя")
     public void existingUserRegistration() {
-        User user = new User(
-                faker.internet().safeEmailAddress(),
-                faker.internet().password(),
-                faker.name().name()
+        User duplicateUser = new User(
+                testUser.getEmail(),
+                testUser.getPassword(),
+                testUser.getName()
         );
-
-        userSteps.setUser(user);
-        userSteps.registerUser();
+        userSteps.setUser(duplicateUser);
         userSteps.registerUser()
                 .then()
                 .statusCode(SC_FORBIDDEN)
